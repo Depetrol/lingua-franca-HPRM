@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+    "runtime",
+    "vecmap",
+]
+exclude = [ "vecmap/creusot" ]
+
+[profile.bench]
+debug = true

@@ -1,0 +1,87 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+    - name: Build
+      run: cargo build
+    - name: Run tests
+      run: cargo test --all-features
+    - name: Run benchmark tests
+      run: cargo test --benches --all-features
+    # documentation
+    - name: Build documentation
+      run: cargo doc --frozen --no-deps
+    - name: Create documentation index
+      # cargo doc does not generate a top-level index,
+      # create a redirect to our own crate doc
+      run: |
+        cat << EOF > target/doc/index.html
+        <meta http-equiv="refresh" content="0; url=./reactor_rt/index.html" />
+        EOF
+    - name: Publish documentation
+      uses: peaceiris/actions-gh-pages@v3.7.3
+      with:
+        publish_branch: gh_pages
+        publish_dir: target/doc
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  lints:
+    name: Lints
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+
+    - name: Run cargo fmt
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+
+    - name: Run cargo clippy
+      uses: actions-rs/cargo@v1
+      with:
+        command: clippy
+        args: --all-features -- -D warnings
+
+  fetch-lf:
+    uses: lf-lang/lingua-franca/.github/workflows/extract-ref.yml@master
+    with:
+      file: 'lingua-franca-ref.txt'
+
+  lf-tests:
+    needs: fetch-lf
+    uses: lf-lang/lingua-franca/.github/workflows/rs-tests.yml@master
+    with:
+      # If this is a PR build, use the head_ref. That ref is the tip of the PR branch,
+      # not merged with master. This therefore assumes the PR is up-to-date with the main branch.
+      # This is important because we can't ask Cargo to fetch github.ref if that ref is
+      # a merge commit automatically committed by GitHub.
+      runtime-ref: ${{ github.head_ref || github.ref }}
+      compiler-ref: ${{ needs.fetch-lf.outputs.ref }}

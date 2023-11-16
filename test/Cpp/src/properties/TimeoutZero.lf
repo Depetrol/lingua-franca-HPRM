@@ -1,0 +1,19 @@
+target Cpp {
+  timeout: 0 s
+}
+
+main reactor {
+  timer should_never_trigger(1 s)
+
+  reaction(startup, shutdown) {=
+    if (!(startup.is_present() && shutdown.is_present())) {
+      reactor::log::Error() << "Shutdown was not triggered at startup";
+      exit(1);
+    }
+  =}
+
+  reaction(should_never_trigger) {=
+    reactor::log::Error() << "Executed a reaction after timeout.";
+    exit(2);
+  =}
+}

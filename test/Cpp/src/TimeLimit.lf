@@ -1,0 +1,73 @@
+// Test that the stop function can be used to internally to impose a a time limit. Correct output
+// for this 1, 2, 3, 4. Failure for this test is failing to halt or getting the wrong data.
+target Cpp {
+  fast: true
+}
+
+reactor Clock(offset: time = 0, period: time = 1 sec) {
+  output y: int
+  timer t(offset, period)
+  state count: int = 0
+
+  reaction(t) -> y {=
+    count++;
+    //std::cout << "Reacting at time " << get_elapsed_logical_time() << '\n';
+    y.set(count);
+  =}
+}
+
+reactor Destination {
+  input x: int
+  state s: int = 1
+  state shutdown_invoked: bool = false
+  input check_shutdown: void
+
+  reaction(x) {=
+    //std::cout << "Received " << *x.get() << '\n';
+    if (*x.get() != s) {
+      reactor::log::Error() << "Expected " << s << " and got " << *x.get();
+      exit(1);
+    }
+    if (*x.get() == 12 && !shutdown_invoked) {
+      reactor::log::Error() << "Shutdown wasn't invoked!";
+    }
+    s++;
+  =}
+
+  reaction(shutdown) {=
+    std::cout << "**** shutdown reaction invoked.\n";
+    shutdown_invoked = true;
+    if(get_microstep() != 1) {
+      reactor::log::Error() << "Expected microstep == 1, but got " << get_microstep();
+      exit(2);
+    }
+    if (s != 12) {
+      reactor::log::Error() << "Expected 12 but got " << s;
+      exit(1);
+    }
+  =}
+
+  reaction(check_shutdown) {=
+    if (!shutdown_invoked) {
+      reactor::log::Error() << "Shutdown wasn't invoked!";
+    }
+  =}
+}
+
+main reactor TimeLimit(period: time = 1 sec) {
+  timer stop(10 sec)
+  c = new Clock(period=period)
+  d = new Destination()
+  c.y -> d.x
+
+  logical action check: void
+
+  reaction(stop) -> check {=
+    environment()->sync_shutdown();
+    check.schedule();
+  =}
+
+  reaction(check) -> d.check_shutdown {=
+    d.check_shutdown.set();
+  =}
+}

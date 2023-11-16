@@ -1,0 +1,34 @@
+plugins {
+    id 'org.lflang.java-application-conventions'
+    id 'com.github.johnrengelman.shadow'
+}
+
+dependencies {
+    implementation project(':core')
+
+    implementation ("de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.lsp:$klighdVersion") {
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.swt.*'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.swt'
+    }
+
+    // This dependency ensures correct animations and bookkeeping during updates
+    // See https://github.com/lf-lang/vscode-lingua-franca/issues/103#issuecomment-1731023470
+    implementation ("de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.incremental:$klighdVersion") {
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.swt.*'
+        exclude group: 'org.eclipse.platform', module: 'org.eclipse.swt'
+    }
+}
+
+application {
+    mainClass = 'org.lflang.diagram.lsp.LanguageDiagramServer'
+}
+
+shadowJar {
+    // Handling of service loader registrations via META-INF/services/*
+    mergeServiceFiles()
+
+    // Merge properties
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
+        resource = 'plugin.properties'
+    }
+}

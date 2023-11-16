@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Also allow running this workflow manually from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  unit-tests-single:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      cmake-args: '-UNUMBER_OF_WORKERS -DLF_UNTHREADED=1'
+
+  unit-tests-multi:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      cmake-args: '-DNUMBER_OF_WORKERS=4 -DLF_THREADED=1'
+
+  build-rti:
+    uses: ./.github/workflows/build-rti.yml
+
+  build-trace-tools:
+    uses: ./.github/workflows/build-trace-tools.yml
+
+  fetch-lf:
+    uses: lf-lang/lingua-franca/.github/workflows/extract-ref.yml@master
+    with:
+      file: 'lingua-franca-ref.txt'
+
+
+  lf-default-arduino:
+    needs: fetch-lf
+    uses: lf-lang/lingua-franca/.github/workflows/c-arduino-tests.yml@master
+    with:
+      runtime-ref: ${{ github.ref }}
+      compiler-ref: ${{ needs.fetch-lf.outputs.ref }}
+
+  lf-default-zephyr:
+    needs: fetch-lf
+    uses: lf-lang/lingua-franca/.github/workflows/c-zephyr-tests.yml@master
+    with:
+      runtime-ref: ${{ github.ref }}
+      compiler-ref: ${{ needs.fetch-lf.outputs.ref }}
+
+  lf-default:
+    needs: fetch-lf
+    uses: lf-lang/lingua-franca/.github/workflows/c-tests.yml@master
+    with:
+      runtime-ref: ${{ github.ref }}
+      compiler-ref: ${{ needs.fetch-lf.outputs.ref }}
+
+  lf-gedf-np:
+    needs: fetch-lf
+    uses: lf-lang/lingua-franca/.github/workflows/c-tests.yml@master
+    with:
+      runtime-ref: ${{ github.ref }}
+      compiler-ref: ${{ needs.fetch-lf.outputs.ref }}
+      scheduler: GEDF_NP
+
+  lf-adaptive:
+    needs: fetch-lf
+    uses: lf-lang/lingua-franca/.github/workflows/c-tests.yml@master
+    with:
+      runtime-ref: ${{ github.ref }}
+      compiler-ref: ${{ needs.fetch-lf.outputs.ref }}
+      scheduler: ADAPTIVE

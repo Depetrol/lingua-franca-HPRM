@@ -1,0 +1,23 @@
+// Source directly sends an implicitly dynamically created object
+target Cpp
+
+import Print from "StructPrint.lf"
+
+public preamble {=
+  #include "include/hello.h"
+=}
+
+reactor DirectSource {
+  output out: Hello
+
+  reaction(startup) -> out {=
+    // this implicitly creates a new hello object which is then send
+    out.set({"Earth", 42});
+  =}
+}
+
+main reactor {
+  s = new DirectSource()
+  p = new Print()
+  s.out -> p.in
+}
