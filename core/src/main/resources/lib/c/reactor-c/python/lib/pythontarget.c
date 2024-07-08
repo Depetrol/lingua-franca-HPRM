@@ -31,6 +31,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * Implementation of functions defined in @see pythontarget.h
  */
 
+#include <Python.h>
 #include "pythontarget.h"
 #include "modal_models/definitions.h"
 #include "platform.h"  // defines MAX_PATH on Windows
@@ -55,6 +56,7 @@ PyObject *globalPythonModuleDict = NULL;
 
 // Import pickle to enable native serialization
 PyObject* global_pickler = NULL;
+PyObject* global_serializer = NULL;
 
 environment_t* top_level_environment = NULL;
 
@@ -275,6 +277,27 @@ PyObject* py_main(PyObject* self, PyObject* py_args) {
                 PyErr_Print();
             }
             lf_print_error_and_exit("Failed to load the module 'pickle'.");
+        }
+    }
+
+    // Load plasma serializer
+    if (global_serializer == NULL) {
+        PyObject *pName = PyUnicode_DecodeFSDefault("globalserializer");
+        PyObject *pModule = PyImport_Import(pName);
+        if (pModule == NULL) {
+            if (PyErr_Occurred()) {
+                PyErr_Print();
+            }
+            lf_print_error_and_exit("Failed to import module 'global_serializer'.");
+        }
+        PyObject *SerializerClass = PyObject_GetAttrString(pModule, "Serializer");
+        global_serializer = PyObject_CallObject(SerializerClass, NULL);;
+        Py_DECREF(pName);
+        if (global_serializer == NULL) {
+            if (PyErr_Occurred()) {
+                PyErr_Print();
+            }
+            lf_print_error_and_exit("Failed to load module 'global_serializer'.");
         }
     }
 
