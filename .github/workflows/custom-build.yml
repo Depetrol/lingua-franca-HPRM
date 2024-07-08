@@ -1,13 +1,11 @@
-name: Nightly build
+name: Custom build
 
 # Trigger the workflow every day at 5 AM (UTC).
 on:
-  schedule:
-    - cron: '0 5 * * *'
   workflow_dispatch:
 
 jobs:
-  nightly-build:
+  custom-build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out lingua-franca repository
@@ -27,6 +25,7 @@ jobs:
         shell: bash
         run: |
           export TIMESTAMP="$(date +'%Y%m%d%H%M%S')"
+          echo "timestamp=$TIMESTAMP" >> "$GITHUB_ENV"
           ./gradlew build -Pnightly=$TIMESTAMP -PtargetOS=Linux -PtargetArch=x86_64
           ./gradlew assemble -Pnightly=$TIMESTAMP -PtargetOS=Linux -PtargetArch=aarch64
           ./gradlew assemble -Pnightly=$TIMESTAMP -PtargetOS=MacOS -PtargetArch=x86_64
@@ -35,9 +34,10 @@ jobs:
       - name: Deploy nightly release
         uses: marvinpinto/action-automatic-releases@latest
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: 'nightly'
+          repo_token: "${{ secrets.NIGHTLY_BUILD }}"
+          automatic_release_tag: '${{ github.ref_name }}'
           prerelease: true
-          title: "Lingua Franca Nightly"
+          draft: true
+          title: "Custom Lingua Franca build for ${{ github.ref_name }} branch"
           files: |
             build/distributions/*
